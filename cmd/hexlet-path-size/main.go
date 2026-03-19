@@ -1,34 +1,49 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/urfave/cli/v3"
 )
 
-func main() {
-	cmd := &cli.Command{
-		Name:  "hexlet-path-size",
-		Usage: "print size of a file or directory",
-		Action: func(ctx context.Context, c *cli.Command) error {
-			if len(os.Args) < 2 {
-				fmt.Println("Please provide a path")
-				return nil
-			}
-			path := os.Args[1]
-			size, err := GetPathSize(path, false, false, false)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("%s\t%s\n", size, path)
-			return nil
-		},
+func GetSize(path string) (int64, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return 0, err
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+	if !info.IsDir() {
+		return info.Size(), nil
+	}
+
+	dirEntries, err := os.ReadDir(path)
+	if err != nil {
+		return 0, err
+	}
+
+	var total int64
+	for _, entry := range dirEntries {
+		ei, err := entry.Info()
+		if err != nil {
+			return 0, err
+		}
+		total += ei.Size()
+	}
+
+	return total, nil
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide a path")
+		return
+	}
+
+	path := os.Args[1]
+	size, err := GetSize(path)
+	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("%dB\t%s\n", size, path)
 }
